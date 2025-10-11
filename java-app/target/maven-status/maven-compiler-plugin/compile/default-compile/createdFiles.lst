@@ -1,0 +1,10 @@
+com/pdfprocessor/service/FileService.class
+com/pdfprocessor/vaadin/view/component/PdfPreviewComponent.class
+com/pdfprocessor/repository/DocumentRepository.class
+com/pdfprocessor/entity/Document.class
+com/pdfprocessor/controller/FileController.class
+com/pdfprocessor/vaadin/view/component/FileUploadComponent.class
+com/pdfprocessor/vaadin/view/component/FileUploadComponent$SimpleMultipartFile.class
+com/pdfprocessor/vaadin/view/MainView.class
+com/pdfprocessor/PdfProcessorApplication.class
+com/pdfprocessor/vaadin/view/component/FileListComponent.class

@@ -1,0 +1,17 @@
+{
+  "productionMode": false,
+  "eagerServerLoad": false,
+  "npmFolder": "/Users/serkan/Github/test/pdf2table/java-app",
+  "node.version": "v20.10.0",
+  "node.download.root": "https://nodejs.org/dist/",
+  "frontendFolder": "/Users/serkan/Github/test/pdf2table/java-app/frontend",
+  "connect.javaSourceFolder": "/Users/serkan/Github/test/pdf2table/java-app/src/main/java",
+  "javaResourceFolder": "/Users/serkan/Github/test/pdf2table/java-app/src/main/resources",
+  "connect.applicationProperties": "/Users/serkan/Github/test/pdf2table/java-app/src/main/resources/application.properties",
+  "connect.openApiFile": "/Users/serkan/Github/test/pdf2table/java-app/target/generated-resources/openapi.json",
+  "project.frontend.generated": "/Users/serkan/Github/test/pdf2table/java-app/frontend/generated",
+  "pnpm.enable": false,
+  "bun.enable": false,
+  "require.home.node": false,
+  "build.folder": "target"
+}

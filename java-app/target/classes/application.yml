@@ -1,0 +1,47 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: pdf-processor-ui
+  
+  # PostgreSQL Database Configuration
+  datasource:
+    url: jdbc:postgresql://localhost:5432/pdf_processor
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  
+  
+  vaadin:
+    productionMode: false
+    closeIdleSessions: true
+  
+  # Spring Boot file upload configuration
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+# File Upload Configuration
+file:
+  upload:
+    dir: ./uploads
+    max-size: 100MB
+
+logging:
+  level:
+    com.pdfprocessor: INFO
+    com.vaadin: WARN
+    org.springframework: WARN
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

@@ -1,0 +1,28 @@
+/* Hide file list in Vaadin Upload component to prevent validation feedback display */
+vaadin-upload.hide-file-list vaadin-upload-file-list {
+    display: none !important;
+}
+
+/* Alternative selector for different Vaadin versions */
+vaadin-upload.hide-file-list .vaadin-upload-file-list {
+    display: none !important;
+}
+
+/* Hide drop zone feedback */
+vaadin-upload.hide-file-list .vaadin-upload-drop-zone {
+    display: none !important;
+}
+
+/* General selectors as fallback */
+vaadin-upload vaadin-upload-file-list {
+    display: none !important;
+}
+
+vaadin-upload .vaadin-upload-file-list {
+    display: none !important;
+}
+
+/* Ensure only the upload button is visible */
+vaadin-upload {
+    --vaadin-upload-file-list-display: none;
+}
