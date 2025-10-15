@@ -2,6 +2,7 @@ package com.pdfprocessor.service;
 
 import com.pdfprocessor.entity.Document;
 import com.pdfprocessor.repository.DocumentRepository;
+import com.pdfprocessor.util.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -124,19 +125,6 @@ public class FileService {
     }
 
     public String getFileSizeInHumanReadable(Long fileSize) {
-        if (fileSize == null) {
-            return "0 B";
-        }
-
-        String[] units = {"B", "KB", "MB", "GB"};
-        int unitIndex = 0;
-        double size = fileSize.doubleValue();
-
-        while (size >= 1024 && unitIndex < units.length - 1) {
-            size /= 1024;
-            unitIndex++;
-        }
-
-        return String.format("%.1f %s", size, units[unitIndex]);
+        return FileUtils.getFileSizeInHumanReadable(fileSize);
     }
 }

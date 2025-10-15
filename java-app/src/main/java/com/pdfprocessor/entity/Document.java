@@ -1,8 +1,11 @@
 package com.pdfprocessor.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -33,6 +36,13 @@ public class Document {
 
     @Column(name = "status", nullable = false, length = 50)
     private String status = "UPLOADED";
+
+    @Column(name = "analysis_status", length = 50)
+    private String analysisStatus = "NOT_STARTED";
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "analysis_results", columnDefinition = "jsonb")
+    private Map<String, Object> analysisResults;
 
     // Default constructor
     public Document() {
@@ -102,6 +112,22 @@ public class Document {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getAnalysisStatus() {
+        return analysisStatus;
+    }
+
+    public void setAnalysisStatus(String analysisStatus) {
+        this.analysisStatus = analysisStatus;
+    }
+
+    public Map<String, Object> getAnalysisResults() {
+        return analysisResults;
+    }
+
+    public void setAnalysisResults(Map<String, Object> analysisResults) {
+        this.analysisResults = analysisResults;
     }
 
     @Override

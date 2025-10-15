@@ -1,0 +1,25 @@
+fastapi
+uvicorn[standard]
+python-multipart
+aiofiles
+pillow
+pydantic
+httpx
+
+# Deepdoctection dependencies
+deepdoctection==0.46
+python-doctr==1.0.0
+torch
+torchvision
+torchaudio
+transformers
+
+# Docling dependencies
+docling
+docling-core
+
+# Additional dependencies
+numpy
+opencv-python
+matplotlib
+scikit-image

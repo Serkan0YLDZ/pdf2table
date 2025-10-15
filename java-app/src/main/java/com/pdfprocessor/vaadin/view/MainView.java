@@ -2,6 +2,7 @@ package com.pdfprocessor.vaadin.view;
 
 import com.pdfprocessor.entity.Document;
 import com.pdfprocessor.service.FileService;
+import com.pdfprocessor.service.AnalysisService;
 import com.pdfprocessor.vaadin.view.component.FileListComponent;
 import com.pdfprocessor.vaadin.view.component.FileUploadComponent;
 import com.pdfprocessor.vaadin.view.component.PdfPreviewComponent;
@@ -34,6 +35,7 @@ public class MainView extends AppLayout {
     private static final Logger logger = LoggerFactory.getLogger(MainView.class);
 
     private final FileService fileService;
+    private final AnalysisService analysisService;
     private final VerticalLayout fileListContainer;
     private final VerticalLayout mainContent;
     private Button toggleButton;
@@ -41,8 +43,9 @@ public class MainView extends AppLayout {
     private H2 fileListTitle;
     private Document selectedDocument;
 
-    public MainView(FileService fileService) {
+    public MainView(FileService fileService, AnalysisService analysisService) {
         this.fileService = fileService;
+        this.analysisService = analysisService;
         this.fileListContainer = new VerticalLayout();
         this.mainContent = new VerticalLayout();
         
@@ -168,7 +171,7 @@ public class MainView extends AppLayout {
 
     private void updatePdfViewer() {
         mainContent.removeAll();
-        Component pdfPreview = PdfPreviewComponent.create(selectedDocument, fileService);
+        Component pdfPreview = PdfPreviewComponent.create(selectedDocument, fileService, analysisService);
         mainContent.add(pdfPreview);
     }
     

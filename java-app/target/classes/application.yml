@@ -1,47 +1,63 @@
-server:
-  port: 8080
-
 spring:
   application:
     name: pdf-processor-ui
   
-  # PostgreSQL Database Configuration
+  # Database configuration
   datasource:
     url: jdbc:postgresql://localhost:5432/pdf_processor
-    username: postgres
-    password: postgres
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
-  
-  # JPA Configuration
+    
+  # JPA configuration
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: validate
+    show-sql: false
     properties:
       hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-  
-  
-  vaadin:
-    productionMode: false
-    closeIdleSessions: true
-  
-  # Spring Boot file upload configuration
+    open-in-view: false
+    
+  # File upload configuration
   servlet:
     multipart:
-      max-file-size: 100MB
-      max-request-size: 100MB
+      max-file-size: 50MB
+      max-request-size: 50MB
 
-# File Upload Configuration
+# Server configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+# Analysis service configuration
+analysis:
+  python:
+    service:
+      url: ${PYTHON_SERVICE_URL:http://localhost:8000}
+  results:
+    dir: ${ANALYSIS_RESULTS_DIR:./analysis_results}
+  timeout: ${ANALYSIS_TIMEOUT:300000}
+
+# File upload directory
 file:
   upload:
-    dir: ./uploads
-    max-size: 100MB
+    dir: ${FILE_UPLOAD_DIR:./uploads}
 
+# Logging configuration
 logging:
   level:
     com.pdfprocessor: INFO
-    com.vaadin: WARN
-    org.springframework: WARN
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Vaadin configuration
+vaadin:
+  productionMode: false
+  closeIdleSessions: true
+  heartbeatInterval: 300
