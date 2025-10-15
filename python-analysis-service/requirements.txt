@@ -6,7 +6,7 @@ pillow
 pydantic
 httpx
 
-# Deepdoctection dependencies
+# Deepdoctection dependencies - optimized for macOS
 deepdoctection==0.46
 python-doctr==1.0.0
 torch

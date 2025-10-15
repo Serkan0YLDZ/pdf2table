@@ -16,7 +16,7 @@ from PIL import Image, ImageDraw, ImageFont
 logger = logging.getLogger(__name__)
 
 # Analysis results directory
-ANALYSIS_RESULTS_DIR = os.getenv("ANALYSIS_RESULTS_DIR", "/tmp/analysis_results")
+ANALYSIS_RESULTS_DIR = os.getenv("ANALYSIS_RESULTS_DIR", "../java-app/uploads/analysis")
 
 
 class AnalysisOrchestrator:
@@ -94,28 +94,44 @@ class AnalysisOrchestrator:
 
     
     def _init_deepdoctection(self):
-        """Initialize deepdoctection analyzer"""
+        """Initialize deepdoctection analyzer optimized for macOS"""
         try:
-            from deepdoctection.analyzer import get_dd_analyzer
+            import deepdoctection as dd
             
+            # Configuration optimized for macOS and layout analysis
             config_overwrite = [
                 "USE_LAYOUT=True",
                 "USE_TABLE_SEGMENTATION=True", 
                 "USE_OCR=False",
-                "USE_LAYOUT_NMS=True"
+                "USE_LAYOUT_NMS=True",
+                "USE_ROTATOR=False",
+                "USE_PDF_MINER=False",
+                "USE_LAYOUT_LINK=False",
+                "USE_LINE_MATCHER=False",
+                "USE_TABLE_REFINEMENT=False"
             ]
             
-            analyzer = get_dd_analyzer(
+            # Use CPU for macOS compatibility
+            analyzer = dd.get_dd_analyzer(
                 reset_config_file=True,
                 config_overwrite=config_overwrite
             )
             
-            logger.info("Deepdoctection analyzer initialized successfully")
+            logger.info("Deepdoctection analyzer initialized successfully for macOS")
             return analyzer
             
         except Exception as e:
             logger.error(f"Failed to initialize deepdoctection analyzer: {e}")
-            raise
+            # Try fallback initialization
+            try:
+                logger.info("Attempting fallback deepdoctection initialization...")
+                import deepdoctection as dd
+                analyzer = dd.get_dd_analyzer()
+                logger.info("Fallback deepdoctection analyzer initialized successfully")
+                return analyzer
+            except Exception as fallback_e:
+                logger.error(f"Fallback initialization also failed: {fallback_e}")
+                raise
     
     def _init_docling(self):
         """Initialize docling converter"""
@@ -165,28 +181,42 @@ class AnalysisOrchestrator:
         results = []
         
         try:
+            # Analyze the document
             df = self.deepdoctection_analyzer.analyze(path=file_path)
+            df.reset_state()  # Important: reset state before iteration
             
             if progress_callback:
                 progress_callback(70, "Processing analysis results")
             
+            # Process each page
             for dp in df:
                 page_number = dp.page_number
                 
+                # Convert 0-based page numbers to 1-based for Java compatibility
+                display_page_number = page_number + 1
+                
                 if progress_callback:
-                    progress_callback(60 + (page_number * 5), f"Processing page {page_number}")
+                    progress_callback(60 + (display_page_number * 5), f"Processing page {display_page_number}")
                 
                 result_dir = Path(ANALYSIS_RESULTS_DIR) / document_id / "deepdoctection"
                 result_dir.mkdir(parents=True, exist_ok=True)
                 
-                result_file = result_dir / f"page_{page_number}.png"
+                result_file = result_dir / f"page_{display_page_number}.png"
                 self._create_deepdoctection_visualization(dp, str(result_file))
                 
                 results.append({
-                    "page_number": page_number,
+                    "page_number": display_page_number,  # Use 1-based page number for Java
                     "file_path": str(result_file),
                     "analysis_type": "deepdoctection"
                 })
+            
+            # Create PDF from all images
+            if progress_callback:
+                progress_callback(85, "Creating PDF from analysis images")
+            
+            pdf_path = self._create_deepdoctection_pdf(document_id, result_dir)
+            if pdf_path:
+                logger.info(f"Deepdoctection PDF created: {pdf_path}")
             
             logger.info(f"Deepdoctection analysis completed: {len(results)} pages processed")
             return results
@@ -231,49 +261,136 @@ class AnalysisOrchestrator:
     def _create_deepdoctection_visualization(self, datapoint, output_path: str):
         """Create layout visualization for deepdoctection"""
         try:
-            # Get image
+            # Get image from datapoint
             image = datapoint.image
             
             # Convert to PIL Image if needed
             if hasattr(image, 'numpy'):
                 image_np = image.numpy()
+            elif hasattr(image, 'array'):
+                image_np = np.array(image.array)
             else:
                 image_np = np.array(image)
             
-            # Convert to RGB if needed
-            if len(image_np.shape) == 3 and image_np.shape[2] == 3:
-                pil_image = Image.fromarray(image_np)
+            # Ensure image is in correct format
+            if len(image_np.shape) == 3:
+                if image_np.shape[2] == 3:
+                    pil_image = Image.fromarray(image_np)
+                elif image_np.shape[2] == 4:
+                    pil_image = Image.fromarray(image_np).convert('RGB')
+                else:
+                    pil_image = Image.fromarray(image_np[:,:,0]).convert('RGB')
             else:
                 pil_image = Image.fromarray(image_np).convert('RGB')
             
             # Create drawing context
             draw = ImageDraw.Draw(pil_image)
             
-            # Try to load a font
+            # Try to load a font (macOS compatible)
             try:
-                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 16)
+                # Try macOS system fonts first
+                font_paths = [
+                    "/System/Library/Fonts/Arial.ttf",
+                    "/System/Library/Fonts/Helvetica.ttc",
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                    "/Library/Fonts/Arial.ttf"
+                ]
+                font = None
+                for font_path in font_paths:
+                    try:
+                        font = ImageFont.truetype(font_path, 16)
+                        break
+                    except:
+                        continue
+                if font is None:
+                    font = ImageFont.load_default()
             except:
                 font = ImageFont.load_default()
             
             # Draw layout annotations
-            for annotation in datapoint.layouts:
-                bbox = annotation.bounding_box
-                category = annotation.category_name
-                
-                # Draw bounding box
-                x1, y1, x2, y2 = bbox.ulx, bbox.uly, bbox.lrx, bbox.lry
-                draw.rectangle([x1, y1, x2, y2], outline='red', width=2)
-                
-                # Draw category label
-                draw.text((x1, y1-20), category, fill='red', font=font)
+            layout_count = 0
+            if hasattr(datapoint, 'layouts') and datapoint.layouts:
+                for annotation in datapoint.layouts:
+                    try:
+                        bbox = annotation.bounding_box
+                        category = annotation.category_name
+                        
+                        # Draw bounding box
+                        x1, y1, x2, y2 = bbox.ulx, bbox.uly, bbox.lrx, bbox.lry
+                        
+                        # Choose color based on category
+                        color = 'red'  # default
+                        if 'table' in str(category).lower():
+                            color = 'red'
+                        elif 'figure' in str(category).lower() or 'image' in str(category).lower():
+                            color = 'green'
+                        elif 'text' in str(category).lower():
+                            color = 'blue'
+                        elif 'title' in str(category).lower():
+                            color = 'purple'
+                        elif 'list' in str(category).lower():
+                            color = 'orange'
+                        
+                        draw.rectangle([x1, y1, x2, y2], outline=color, width=2)
+                        
+                        # Draw category label
+                        draw.text((x1, y1-20), str(category), fill=color, font=font)
+                        layout_count += 1
+                        
+                    except Exception as e:
+                        logger.warning(f"Error drawing layout annotation: {e}")
+                        continue
+            
+            # Draw table annotations if available
+            if hasattr(datapoint, 'tables') and datapoint.tables:
+                for table in datapoint.tables:
+                    try:
+                        bbox = table.bounding_box
+                        x1, y1, x2, y2 = bbox.ulx, bbox.uly, bbox.lrx, bbox.lry
+                        draw.rectangle([x1, y1, x2, y2], outline='red', width=3)
+                        draw.text((x1, y1-20), "TABLE", fill='red', font=font)
+                    except Exception as e:
+                        logger.warning(f"Error drawing table annotation: {e}")
+                        continue
+            
+            # Add summary text
+            summary_text = f"Deepdoctection Analysis - {layout_count} layouts detected"
+            draw.text((10, 10), summary_text, fill='black', font=font)
             
             # Save image
             pil_image.save(output_path, 'PNG')
-            logger.info(f"Deepdoctection layout visualization saved: {output_path}")
+            logger.info(f"Deepdoctection layout visualization saved: {output_path} ({layout_count} layouts)")
             
         except Exception as e:
             logger.error(f"Error creating deepdoctection visualization: {e}")
             self._create_placeholder_image(output_path, "Deepdoctection")
+    
+    def _create_deepdoctection_pdf(self, document_id: str, result_dir: Path) -> str:
+        """Create PDF from deepdoctection analysis images"""
+        try:
+            # Import the PDF creation function
+            from docling_to_pdf import create_analysis_pdf
+            
+            # Get the correct base directory (java-app/uploads/analysis)
+            base_dir = str(Path(ANALYSIS_RESULTS_DIR))
+            
+            # Create PDF using the existing function
+            pdf_path = create_analysis_pdf(
+                document_id=document_id,
+                analysis_type="deepdoctection",
+                base_dir=base_dir
+            )
+            
+            if pdf_path:
+                logger.info(f"Deepdoctection PDF created successfully: {pdf_path}")
+                return pdf_path
+            else:
+                logger.error("Failed to create deepdoctection PDF")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error creating deepdoctection PDF: {e}")
+            return None
     
     def _create_docling_visualization(self, page, output_path: str):
         """Create layout visualization for docling"""

@@ -98,7 +98,7 @@ public class AnalysisPanel {
     
     private static Button createStartButton(String analysisType, Document selectedDocument, AnalysisService analysisService) {
         Button startButton = new Button("Start " + analysisType + " Analysis");
-        startButton.getStyle().set("width", "100%");
+        startButton.getStyle().set("width", "calc(100% - 2rem)");
         startButton.getStyle().set("background", "var(--lumo-primary-color)");
         startButton.getStyle().set("color", "var(--lumo-primary-contrast-color)");
         startButton.getStyle().set("border", "none");

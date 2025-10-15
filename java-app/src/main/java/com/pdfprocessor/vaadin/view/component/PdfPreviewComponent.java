@@ -23,26 +23,31 @@ public class PdfPreviewComponent {
         mainContainer.getStyle().set("border-radius", "var(--lumo-border-radius-l)");
         mainContainer.getStyle().set("box-shadow", "var(--lumo-box-shadow-m)");
         
-        // Inner horizontal layout with fixed minimum width
+        // Inner horizontal layout with fixed minimum width for 3 columns
         HorizontalLayout container = new HorizontalLayout();
         container.setSpacing(true);
         container.setPadding(true);
         container.setWidth("max-content");
         container.setMinWidth("100%");
         container.setHeightFull();
-        container.getStyle().set("min-width", "1000px"); // Ensure minimum width for proper display with 2 columns
+        container.getStyle().set("min-width", "1500px"); // Ensure minimum width for proper display with 3 columns
         
         // First column: Original PDF Viewer (left side)
         Component pdfViewer = PdfViewer.create(selectedDocument, fileService);
-        pdfViewer.getElement().getStyle().set("flex", "0 0 50%"); // Take half the width
+        pdfViewer.getElement().getStyle().set("flex", "0 0 33.33%"); // Take one third of the width
         pdfViewer.getElement().getStyle().set("min-width", "500px");
         
-        // Second column: Analysis PDF Viewer (right side) - Layout Analiz Çıktısı
-        Component analysisPdfViewer = AnalysisPdfViewer.create(selectedDocument, "docling", analysisService);
-        analysisPdfViewer.getElement().getStyle().set("flex", "0 0 50%"); // Take half the width
-        analysisPdfViewer.getElement().getStyle().set("min-width", "500px");
+        // Second column: Docling Analysis (middle)
+        Component doclingAnalysisViewer = AnalysisPdfViewer.create(selectedDocument, "docling", analysisService);
+        doclingAnalysisViewer.getElement().getStyle().set("flex", "0 0 33.33%"); // Take one third of the width
+        doclingAnalysisViewer.getElement().getStyle().set("min-width", "500px");
         
-        container.add(pdfViewer, analysisPdfViewer);
+        // Third column: Deepdoctection Analysis (right side)
+        Component deepdoctectionAnalysisViewer = AnalysisPdfViewer.create(selectedDocument, "deepdoctection", analysisService);
+        deepdoctectionAnalysisViewer.getElement().getStyle().set("flex", "0 0 33.33%"); // Take one third of the width
+        deepdoctectionAnalysisViewer.getElement().getStyle().set("min-width", "500px");
+        
+        container.add(pdfViewer, doclingAnalysisViewer, deepdoctectionAnalysisViewer);
         mainContainer.add(container);
         
         return mainContainer;

@@ -3,14 +3,11 @@ PDF Analysis Service using FastAPI
 Integrates deepdoctection and docling for PDF layout analysis
 """
 
-import asyncio
-import json
 import logging
 import os
-import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Dict
 
 import aiofiles
 from fastapi import FastAPI, HTTPException, BackgroundTasks
@@ -40,12 +37,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global task storage (in production, use Redis or database)
-tasks: Dict[str, Dict] = {}
-
 # Configuration
-ANALYSIS_RESULTS_DIR = os.getenv("ANALYSIS_RESULTS_DIR", "/tmp/analysis_results")
-MAX_WORKERS = int(os.getenv("MAX_WORKERS", "2"))
+ANALYSIS_RESULTS_DIR = os.getenv("ANALYSIS_RESULTS_DIR", "../java-app/uploads/analysis")
 
 # Ensure results directory exists
 os.makedirs(ANALYSIS_RESULTS_DIR, exist_ok=True)
@@ -56,23 +49,6 @@ class AnalysisRequest(BaseModel):
     analysis_type: str
     file_path: str
     file_name: str
-
-
-class TaskStatus(BaseModel):
-    task_id: str
-    status: str
-    progress: int
-    message: str
-    created_at: datetime
-    completed_at: Optional[datetime] = None
-    error: Optional[str] = None
-
-
-class AnalysisResult(BaseModel):
-    task_id: str
-    document_id: str
-    analysis_type: str
-    results: List[Dict]
 
 
 @app.get("/health")
@@ -102,79 +78,19 @@ async def start_analysis(request: AnalysisRequest, background_tasks: BackgroundT
     """Start PDF analysis"""
     logger.info(f"Starting analysis for document: {request.document_id}, type: {request.analysis_type}")
     
-    # Generate task ID
-    task_id = str(uuid.uuid4())
-    
-    # Create task entry
-    task = {
-        "task_id": task_id,
-        "document_id": request.document_id,
-        "analysis_type": request.analysis_type,
-        "file_path": request.file_path,
-        "file_name": request.file_name,
-        "status": "pending",
-        "progress": 0,
-        "message": "Analysis queued",
-        "created_at": datetime.now(),
-        "completed_at": None,
-        "error": None
-    }
-    
-    tasks[task_id] = task
-    
-    # Start background task
-    background_tasks.add_task(process_analysis, task_id)
+    # Start background task - basit queue
+    background_tasks.add_task(process_analysis_simple, request)
     
     return {
-        "task_id": task_id,
         "status": "started",
         "message": "Analysis started successfully"
     }
 
 
-@app.get("/status/{task_id}")
-async def get_task_status(task_id: str):
-    """Get task status"""
-    if task_id not in tasks:
-        raise HTTPException(status_code=404, detail="Task not found")
-    
-    task = tasks[task_id]
-    return TaskStatus(**task)
-
-
-@app.get("/results/{task_id}")
-async def get_task_results(task_id: str):
-    """Get task results"""
-    if task_id not in tasks:
-        raise HTTPException(status_code=404, detail="Task not found")
-    
-    task = tasks[task_id]
-    
-    if task["status"] != "completed":
-        raise HTTPException(status_code=400, detail="Task not completed yet")
-    
-    # Get results from file system
-    results = await get_analysis_results(task["document_id"], task["analysis_type"])
-    
-    return AnalysisResult(
-        task_id=task_id,
-        document_id=task["document_id"],
-        analysis_type=task["analysis_type"],
-        results=results
-    )
-
-
-async def process_analysis(task_id: str):
-    """Process PDF analysis in background"""
-    task = tasks[task_id]
-    
+async def process_analysis_simple(request: AnalysisRequest):
+    """Process PDF analysis in background - basit versiyon"""
     try:
-        logger.info(f"Processing analysis task: {task_id}")
-        
-        # Update status
-        task["status"] = "running"
-        task["progress"] = 10
-        task["message"] = "Initializing analysis"
+        logger.info(f"Processing analysis for document: {request.document_id}, type: {request.analysis_type}")
         
         # Import analysis services
         from analysis_services import AnalysisOrchestrator
@@ -182,56 +98,31 @@ async def process_analysis(task_id: str):
         # Create orchestrator
         orchestrator = AnalysisOrchestrator()
         
-        # Process analysis
-        task["progress"] = 20
-        task["message"] = f"Running {task['analysis_type']} analysis"
-        
         # Convert relative path to absolute path
-        file_path = task["file_path"]
+        file_path = request.file_path
         if not os.path.isabs(file_path):
-            # If it's a relative path starting with ./uploads/, look in the java-app directory
             if file_path.startswith("./uploads/") or file_path.startswith("uploads/"):
-                # Remove ./ prefix if present
                 relative_path = file_path.replace("./", "")
-                # Look in the java-app directory (one level up from python-analysis-service)
                 java_app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 file_path = os.path.join(java_app_dir, "java-app", relative_path)
             else:
-                # For other relative paths, make it absolute from the current working directory
                 file_path = os.path.abspath(file_path)
         
         # Check if file exists
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"PDF file not found: {file_path}")
         
-        results = await orchestrator.analyze_document(
-            document_id=task["document_id"],
-            analysis_type=task["analysis_type"],
-            file_path=file_path,
-            progress_callback=lambda p, msg: update_task_progress(task_id, p, msg)
+        # Process analysis
+        await orchestrator.analyze_document(
+            document_id=request.document_id,
+            analysis_type=request.analysis_type,
+            file_path=file_path
         )
         
-        # Update final status
-        task["status"] = "completed"
-        task["progress"] = 100
-        task["message"] = "Analysis completed successfully"
-        task["completed_at"] = datetime.now()
-        
-        logger.info(f"Analysis completed for task: {task_id}")
+        logger.info(f"Analysis completed for document: {request.document_id}")
         
     except Exception as e:
-        logger.error(f"Error processing analysis task {task_id}: {str(e)}")
-        task["status"] = "failed"
-        task["error"] = str(e)
-        task["message"] = f"Analysis failed: {str(e)}"
-        task["completed_at"] = datetime.now()
-
-
-def update_task_progress(task_id: str, progress: int, message: str):
-    """Update task progress"""
-    if task_id in tasks:
-        tasks[task_id]["progress"] = progress
-        tasks[task_id]["message"] = message
+        logger.error(f"Error processing analysis for document {request.document_id}: {str(e)}")
 
 
 async def get_analysis_results(document_id: str, analysis_type: str) -> List[Dict]:

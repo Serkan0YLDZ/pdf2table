@@ -149,7 +149,7 @@ public class AnalysisPdfViewer {
     
     private static Component createAnalysisStartArea(Document selectedDocument, String analysisType, AnalysisService analysisService) {
         Div startArea = new Div();
-        startArea.setWidthFull();
+        startArea.setWidth("calc(100% - 4rem)");
         startArea.setHeight("calc(100% - 100px)");
         startArea.getStyle().set("border", "1px solid var(--lumo-contrast-10pct)");
         startArea.getStyle().set("border-radius", "var(--lumo-border-radius-m)");
@@ -203,7 +203,7 @@ public class AnalysisPdfViewer {
         startButton.getStyle().set("cursor", "pointer");
         startButton.getStyle().set("box-shadow", "var(--lumo-box-shadow-m)");
         startButton.getStyle().set("transition", "all 0.2s ease");
-        startButton.getStyle().set("min-width", "200px");
+        startButton.getStyle().set("min-width", "180px");
         
         // Hover effects
         startButton.getElement().addEventListener("mouseenter", e -> {
