@@ -168,13 +168,40 @@ public class AnalysisPanel {
         
         pollButton.addClickListener(event -> {
             try {
-                analysisService.pollAndSaveAnalysisResults(selectedDocument.getId(), analysisType);
-                pollButton.setText("Results Checked");
-                pollButton.getStyle().set("background", "var(--lumo-primary-color)");
+                // Show loading state
+                pollButton.setEnabled(false);
+                pollButton.setText("Checking...");
+                pollButton.getStyle().set("background", "var(--lumo-contrast-10pct)");
                 
-                // Refresh results display
-                ResultsDisplay.refreshResultsDisplay(resultsArea, selectedDocument, analysisType, analysisService);
+                // Poll for new results
+                analysisService.pollAndSaveAnalysisResults(selectedDocument.getId(), analysisType);
+                
+                // Refresh only this panel's results area using UI.access for thread safety
+                pollButton.getUI().ifPresent(ui -> {
+                    ui.access(() -> {
+                        try {
+                            // Refresh only this panel's results area
+                            ResultsDisplay.refreshResultsDisplay(resultsArea, selectedDocument, analysisType, analysisService);
+                            
+                            // Update button state
+                            pollButton.setEnabled(true);
+                            pollButton.setText("Results Checked");
+                            pollButton.getStyle().set("background", "var(--lumo-primary-color)");
+                            
+                            logger.info("Layout analysis results refreshed for {} analysis panel, document: {}", analysisType, selectedDocument.getId());
+                            
+                        } catch (Exception e) {
+                            logger.error("Error refreshing results display: {}", e.getMessage(), e);
+                            pollButton.setEnabled(true);
+                            pollButton.setText("Error: " + e.getMessage());
+                            pollButton.getStyle().set("background", "var(--lumo-error-color)");
+                        }
+                    });
+                });
+                
             } catch (Exception e) {
+                logger.error("Error polling analysis results: {}", e.getMessage(), e);
+                pollButton.setEnabled(true);
                 pollButton.setText("Error: " + e.getMessage());
                 pollButton.getStyle().set("background", "var(--lumo-error-color)");
             }

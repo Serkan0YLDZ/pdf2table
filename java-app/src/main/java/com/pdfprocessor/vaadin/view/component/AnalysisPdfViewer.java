@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * PDF viewer component for displaying merged analysis results
@@ -305,41 +306,83 @@ public class AnalysisPdfViewer {
             refreshButton.getStyle().set("transform", "scale(1)");
         });
         
-        // Click handler to check for analysis results and generate PDF
+        // Click handler to refresh only this PDF viewer area
         refreshButton.addClickListener(event -> {
             try {
-                // First, poll Python service for new results
+                // Show loading state
+                refreshButton.setEnabled(false);
+                refreshButton.getElement().setProperty("innerHTML", 
+                    "<div style='animation: spin 1s linear infinite; transform-origin: center;'>⟳</div>");
+                refreshButton.getStyle().set("background", "var(--lumo-contrast-10pct)");
+                
+                // Add CSS animation if not already present
+                refreshButton.getUI().ifPresent(ui -> {
+                    ui.getPage().executeJs(
+                        "if (!document.getElementById('refresh-spinner-style')) {" +
+                        "  var style = document.createElement('style');" +
+                        "  style.id = 'refresh-spinner-style';" +
+                        "  style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';" +
+                        "  document.head.appendChild(style);" +
+                        "}"
+                    );
+                });
+                
+                // Poll for new results
                 analysisService.pollAndSaveAnalysisResults(selectedDocument.getId(), analysisType);
                 
-                // Then check for analysis results
-                var analysisResults = analysisService.getAnalysisResults(selectedDocument.getId(), analysisType);
-                
-                if (analysisResults != null && !analysisResults.isEmpty()) {
-                    // Analysis results exist, generate PDF
-                    PdfMergeService pdfMergeService = new PdfMergeService();
-                    byte[] pdfBytes = pdfMergeService.mergeAnalysisImagesToPdf(selectedDocument, analysisType, analysisResults);
-                    
-                    // Show success message and refresh UI
-                    refreshButton.getUI().ifPresent(ui -> {
-                        ui.access(() -> {
-                            logger.info("PDF generated successfully for document: {}", selectedDocument.getId());
-                            // Show success notification instead of page reload
-                            refreshButton.setText("✓ PDF Ready!");
-                            refreshButton.getStyle().set("background", "var(--lumo-success-color)");
-                            refreshButton.getStyle().set("color", "var(--lumo-success-contrast-color)");
-                        });
+                // Refresh only this PDF viewer area using UI.access for thread safety
+                refreshButton.getUI().ifPresent(ui -> {
+                    ui.access(() -> {
+                        try {
+                            // Find the main container (this AnalysisPdfViewer's container)
+                            Component mainContainer = findThisPdfViewerContainer(refreshButton);
+                            if (mainContainer instanceof VerticalLayout) {
+                                refreshThisPdfViewerArea((VerticalLayout) mainContainer, selectedDocument, analysisType, analysisService);
+                            }
+                            
+                            // Reset button state
+                            refreshButton.setEnabled(true);
+                            refreshButton.getElement().setProperty("innerHTML", "");
+                            // Create a completely new button with icon to avoid icon conflicts
+                            refreshButton.getElement().setProperty("innerHTML", 
+                                "<vaadin-icon icon=\"vaadin:refresh\" style=\"width: 16px; height: 16px;\"></vaadin-icon>");
+                            
+                            // Check if results exist and update button color accordingly
+                            var analysisResults = analysisService.getAnalysisResults(selectedDocument.getId(), analysisType);
+                            if (analysisResults != null && !analysisResults.isEmpty()) {
+                                refreshButton.getStyle().set("background", "var(--lumo-success-color)");
+                                refreshButton.getStyle().set("color", "var(--lumo-success-contrast-color)");
+                                logger.info("PDF viewer area refreshed successfully for {} analysis, document: {}", analysisType, selectedDocument.getId());
+                            } else {
+                                refreshButton.getStyle().set("background", "var(--lumo-base-color)");
+                                refreshButton.getStyle().set("color", "var(--lumo-contrast-90pct)");
+                                logger.info("No analysis results found yet for {} analysis, document: {}", analysisType, selectedDocument.getId());
+                            }
+                            
+                        } catch (Exception e) {
+                            logger.error("Error refreshing PDF viewer area: {}", e.getMessage(), e);
+                            // Reset button on error
+                            refreshButton.setEnabled(true);
+                            refreshButton.getElement().setProperty("innerHTML", "");
+                            // Create a completely new button with icon to avoid icon conflicts
+                            refreshButton.getElement().setProperty("innerHTML", 
+                                "<vaadin-icon icon=\"vaadin:refresh\" style=\"width: 16px; height: 16px;\"></vaadin-icon>");
+                            refreshButton.getStyle().set("background", "var(--lumo-error-color)");
+                            refreshButton.getStyle().set("color", "var(--lumo-error-contrast-color)");
+                        }
                     });
-                } else {
-                    // No analysis results yet
-                    refreshButton.getUI().ifPresent(ui -> {
-                        ui.access(() -> {
-                            logger.info("No analysis results found yet for document: {}", selectedDocument.getId());
-                        });
-                    });
-                }
+                });
                 
             } catch (Exception e) {
                 logger.error("Error checking analysis results: {}", e.getMessage(), e);
+                // Reset button on error
+                refreshButton.setEnabled(true);
+                refreshButton.getElement().setProperty("innerHTML", "");
+                // Create a completely new button with icon to avoid icon conflicts
+                refreshButton.getElement().setProperty("innerHTML", 
+                    "<vaadin-icon icon=\"vaadin:refresh\" style=\"width: 16px; height: 16px;\"></vaadin-icon>");
+                refreshButton.getStyle().set("background", "var(--lumo-error-color)");
+                refreshButton.getStyle().set("color", "var(--lumo-error-contrast-color)");
             }
         });
         
@@ -486,5 +529,55 @@ public class AnalysisPdfViewer {
         
         errorState.add(errorTitle, errorText);
         return errorState;
+    }
+    
+    /**
+     * Find this specific PDF viewer's container by navigating up the component hierarchy
+     */
+    private static Component findThisPdfViewerContainer(Component component) {
+        Component current = component;
+        while (current != null) {
+            if (current instanceof VerticalLayout) {
+                VerticalLayout layout = (VerticalLayout) current;
+                // Check if this is the AnalysisPdfViewer container by looking for specific styling
+                if (layout.getStyle().get("border-radius") != null && 
+                    layout.getStyle().get("border-radius").equals("var(--lumo-border-radius-l)")) {
+                    return current;
+                }
+            }
+            current = current.getParent().orElse(null);
+        }
+        return component; // Fallback to original component
+    }
+    
+    /**
+     * Refresh only this specific PDF viewer area without affecting other areas
+     */
+    private static void refreshThisPdfViewerArea(VerticalLayout mainContainer, Document selectedDocument, 
+                                               String analysisType, AnalysisService analysisService) {
+        try {
+            // Remove ALL existing content areas (both start analysis and PDF viewer areas)
+            // Find and remove any existing content divs
+            List<Component> componentsToRemove = mainContainer.getChildren()
+                .filter(child -> child instanceof Div)
+                .collect(Collectors.toList());
+            
+            // Remove all found divs
+            componentsToRemove.forEach(component -> {
+                mainContainer.remove(component);
+                logger.info("Removed existing content area for {} analysis", analysisType);
+            });
+            
+            // Always create and add the new PDF viewer area
+            // This will show either the PDF (if results exist) or "Analysis in Progress" (if no results yet)
+            Div newPdfViewerArea = createPdfViewerArea(selectedDocument, analysisType, analysisService);
+            mainContainer.add(newPdfViewerArea);
+            
+            logger.info("Refreshed PDF viewer area for {} analysis, document: {} - Results exist: {}", 
+                       analysisType, selectedDocument.getId(), hasAnalysisResults(selectedDocument, analysisType, analysisService));
+                
+        } catch (Exception e) {
+            logger.error("Error refreshing this PDF viewer area: {}", e.getMessage(), e);
+        }
     }
 }
