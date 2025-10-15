@@ -90,34 +90,25 @@ public class AnalysisService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
 
         try {
-            // Call Python service
+            // Call Python service - sadece bu satırı try-catch'e al
             String url = pythonServiceUrl + "/analyze";
-            ResponseEntity<Map> response = restTemplate.exchange(
-                url, HttpMethod.POST, request, Map.class);
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, request, Map.class);
 
-            if (response.getStatusCode().is2xxSuccessful()) {
-                logger.info("Analysis started successfully for document: {}", documentId);
-            } else {
+            if (!response.getStatusCode().is2xxSuccessful()) {
                 logger.error("Python service returned error status: {}", response.getStatusCode());
                 updateDocumentAnalysisStatus(document, analysisType, "FAILED");
                 throw new RuntimeException("Analysis service returned error: " + response.getStatusCode());
             }
+            
+            logger.info("Analysis started successfully for document: {}", documentId);
 
         } catch (RestClientException e) {
             logger.error("Failed to connect to Python analysis service for document: {}", documentId, e);
             updateDocumentAnalysisStatus(document, analysisType, "FAILED");
-            throw new RuntimeException("Analysis service is unavailable: " + e.getMessage(), e);
-        } catch (IllegalArgumentException e) {
-            logger.error("Invalid parameters for analysis: {}", e.getMessage());
-            throw e; // Re-throw without wrapping
-        } catch (Exception e) {
-            logger.error("Unexpected error starting analysis for document: {}", documentId, e);
-            updateDocumentAnalysisStatus(document, analysisType, "FAILED");
-            throw new RuntimeException("Failed to start analysis: " + e.getMessage(), e);
+            throw new RuntimeException("Analysis service is unavailable: " + e.getMessage());
         }
     }
 

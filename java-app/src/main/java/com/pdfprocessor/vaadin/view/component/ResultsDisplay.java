@@ -86,21 +86,12 @@ public class ResultsDisplay {
         pageHeader.getStyle().set("color", "var(--lumo-contrast-70pct)");
         pageHeader.setText("Page " + result.getPageNumber());
         
-        // Create image element
-        Image analysisImage = new Image();
+        // Create zoomable image element
         String imageUrl = "/api/files/analysis/" + selectedDocument.getId() + "/" + analysisType + "/" + result.getPageNumber();
-        analysisImage.setSrc(imageUrl);
-        analysisImage.setAlt("Analysis result for page " + result.getPageNumber());
-        
-        // Set image styles
-        analysisImage.getStyle().set("max-width", "100%");
-        analysisImage.getStyle().set("height", "auto");
-        analysisImage.getStyle().set("border", "1px solid var(--lumo-contrast-20pct)");
-        analysisImage.getStyle().set("border-radius", "var(--lumo-border-radius-s)");
-        analysisImage.getStyle().set("box-shadow", "0 2px 4px rgba(0,0,0,0.1)");
+        Component zoomableImage = ZoomableImage.create(imageUrl, "Analysis result for page " + result.getPageNumber());
         
         // Add error handling for image loading
-        analysisImage.getElement().addEventListener("error", e -> {
+        zoomableImage.getElement().addEventListener("error", e -> {
             Div errorDiv = new Div();
             errorDiv.getStyle().set("padding", "2rem");
             errorDiv.getStyle().set("text-align", "center");
@@ -113,7 +104,7 @@ public class ResultsDisplay {
             pageContainer.add(pageHeader, errorDiv);
         });
         
-        pageContainer.add(pageHeader, analysisImage);
+        pageContainer.add(pageHeader, zoomableImage);
         return pageContainer;
     }
     

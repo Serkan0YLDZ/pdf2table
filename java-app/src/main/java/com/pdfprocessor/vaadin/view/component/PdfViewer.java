@@ -20,10 +20,17 @@ public class PdfViewer {
     
     public static Component create(Document selectedDocument, FileService fileService) {
         VerticalLayout pdfViewer = new VerticalLayout();
-        pdfViewer.setSpacing(false);
+        pdfViewer.setSpacing(true);
         pdfViewer.setPadding(true);
         pdfViewer.setWidthFull();
         pdfViewer.setHeightFull();
+        
+        // Modern styling
+        pdfViewer.getStyle().set("border", "1px solid var(--lumo-contrast-10pct)");
+        pdfViewer.getStyle().set("border-radius", "var(--lumo-border-radius-l)");
+        pdfViewer.getStyle().set("background", "var(--lumo-base-color)");
+        pdfViewer.getStyle().set("box-shadow", "var(--lumo-box-shadow-s)");
+        pdfViewer.getStyle().set("transition", "all 0.2s ease");
         
         if (selectedDocument == null) {
             pdfViewer.add(createEmptyState());
@@ -55,17 +62,23 @@ public class PdfViewer {
     
     private static Component createPdfHeader(Document selectedDocument, FileService fileService) {
         Div header = new Div();
-        header.getStyle().set("margin-bottom", "1rem");
+        header.getStyle().set("margin-bottom", "1.5rem");
         header.getStyle().set("padding-bottom", "1rem");
-        header.getStyle().set("border-bottom", "1px solid var(--lumo-contrast-10pct)");
+        header.getStyle().set("border-bottom", "2px solid var(--lumo-primary-color-10pct)");
         
         H3 title = new H3(selectedDocument.getFileName());
         title.getStyle().set("margin", "0 0 0.5rem 0");
         title.getStyle().set("color", "var(--lumo-contrast-90pct)");
+        title.getStyle().set("font-size", "var(--lumo-font-size-l)");
+        title.getStyle().set("font-weight", "600");
+        title.getStyle().set("letter-spacing", "0.025em");
         
         Span fileInfo = new Span(fileService.getFileSizeInHumanReadable(selectedDocument.getFileSize()));
         fileInfo.getStyle().set("color", "var(--lumo-contrast-50pct)");
         fileInfo.getStyle().set("font-size", "var(--lumo-font-size-s)");
+        fileInfo.getStyle().set("background", "var(--lumo-contrast-5pct)");
+        fileInfo.getStyle().set("padding", "0.25rem 0.5rem");
+        fileInfo.getStyle().set("border-radius", "var(--lumo-border-radius-s)");
         
         header.add(title, fileInfo);
         return header;
@@ -74,9 +87,12 @@ public class PdfViewer {
     private static Component createPdfContainer(Document selectedDocument) {
         Div pdfContainer = new Div();
         pdfContainer.setWidthFull();
-        pdfContainer.setHeight("calc(100% - 100px)");
-        pdfContainer.getStyle().set("border", "1px solid var(--lumo-contrast-20pct)");
+        pdfContainer.setHeight("calc(100% - 120px)");
+        pdfContainer.getStyle().set("border", "1px solid var(--lumo-contrast-10pct)");
         pdfContainer.getStyle().set("border-radius", "var(--lumo-border-radius-m)");
+        pdfContainer.getStyle().set("background", "var(--lumo-contrast-5pct)");
+        pdfContainer.getStyle().set("box-shadow", "inset 0 1px 3px rgba(0,0,0,0.1)");
+        pdfContainer.getStyle().set("overflow", "hidden");
         
         try {
             Div pdfViewerDiv = createPdfViewer(selectedDocument);

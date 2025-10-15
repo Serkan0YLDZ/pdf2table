@@ -67,7 +67,7 @@ public class AnalysisController {
             errorResponse.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(errorResponse);
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             logger.error("Error starting analysis", e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
@@ -89,7 +89,7 @@ public class AnalysisController {
             List<AnalysisFile> results = analysisService.getAnalysisResults(documentId, analysisType);
             return ResponseEntity.ok(results);
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             logger.error("Error getting analysis results", e);
             return ResponseEntity.internalServerError().build();
         }
@@ -108,7 +108,7 @@ public class AnalysisController {
             Map<String, Object> status = analysisService.getAnalysisStatus(documentId, analysisType);
             return ResponseEntity.ok(status);
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             logger.error("Error getting analysis status", e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Failed to get analysis status: " + e.getMessage());
@@ -116,25 +116,6 @@ public class AnalysisController {
         }
     }
 
-    /**
-     * Get analysis result file (image)
-     */
-    @GetMapping("/files/{analysisFileId}")
-    public ResponseEntity<Resource> getAnalysisFile(@PathVariable UUID analysisFileId) {
-        try {
-            logger.info("Getting analysis file: {}", analysisFileId);
-            
-            // This would need to be implemented in AnalysisService
-            // For now, we'll return a placeholder response
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Analysis file endpoint not yet implemented");
-            return ResponseEntity.notFound().build();
-
-        } catch (Exception e) {
-            logger.error("Error getting analysis file", e);
-            return ResponseEntity.internalServerError().build();
-        }
-    }
 
     /**
      * Get analysis result file by document ID, analysis type and page number
@@ -175,7 +156,7 @@ public class AnalysisController {
                     .contentType(MediaType.IMAGE_PNG)
                     .body(resource);
                     
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             logger.error("Error getting analysis file", e);
             return ResponseEntity.internalServerError().build();
         }
@@ -198,7 +179,7 @@ public class AnalysisController {
             response.put("message", "Analysis results polled successfully");
             return ResponseEntity.ok(response);
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             logger.error("Error polling analysis results", e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);

@@ -34,11 +34,6 @@ public class Document {
     @Column(name = "mime_type", nullable = false, length = 100)
     private String mimeType;
 
-    @Column(name = "status", nullable = false, length = 50)
-    private String status = "UPLOADED";
-
-    @Column(name = "analysis_status", length = 50)
-    private String analysisStatus = "NOT_STARTED";
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "analysis_results", columnDefinition = "jsonb")
@@ -106,21 +101,6 @@ public class Document {
         this.mimeType = mimeType;
     }
 
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public String getAnalysisStatus() {
-        return analysisStatus;
-    }
-
-    public void setAnalysisStatus(String analysisStatus) {
-        this.analysisStatus = analysisStatus;
-    }
 
     public Map<String, Object> getAnalysisResults() {
         return analysisResults;

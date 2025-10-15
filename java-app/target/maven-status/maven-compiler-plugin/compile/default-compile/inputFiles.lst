@@ -3,11 +3,14 @@
 /Users/serkan/Github/pdf2table/java-app/src/main/java/com/pdfprocessor/service/AnalysisService.java
 /Users/serkan/Github/pdf2table/java-app/src/main/java/com/pdfprocessor/vaadin/view/component/PdfViewer.java
 /Users/serkan/Github/pdf2table/java-app/src/main/java/com/pdfprocessor/service/FileService.java
+/Users/serkan/Github/pdf2table/java-app/src/main/java/com/pdfprocessor/vaadin/view/component/ZoomableImage.java
 /Users/serkan/Github/pdf2table/java-app/src/main/java/com/pdfprocessor/PdfProcessorApplication.java
 /Users/serkan/Github/pdf2table/java-app/src/main/java/com/pdfprocessor/vaadin/view/component/ResultsDisplay.java
 /Users/serkan/Github/pdf2table/java-app/src/main/java/com/pdfprocessor/repository/DocumentRepository.java
 /Users/serkan/Github/pdf2table/java-app/src/main/java/com/pdfprocessor/vaadin/view/component/AnalysisPanel.java
 /Users/serkan/Github/pdf2table/java-app/src/main/java/com/pdfprocessor/repository/AnalysisFileRepository.java
+/Users/serkan/Github/pdf2table/java-app/src/main/java/com/pdfprocessor/service/PdfMergeService.java
+/Users/serkan/Github/pdf2table/java-app/src/main/java/com/pdfprocessor/vaadin/view/component/AnalysisPdfViewer.java
 /Users/serkan/Github/pdf2table/java-app/src/main/java/com/pdfprocessor/entity/Document.java
 /Users/serkan/Github/pdf2table/java-app/src/main/java/com/pdfprocessor/controller/FileController.java
 /Users/serkan/Github/pdf2table/java-app/src/main/java/com/pdfprocessor/vaadin/view/component/PdfPreviewComponent.java

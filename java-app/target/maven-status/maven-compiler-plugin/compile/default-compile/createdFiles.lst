@@ -5,6 +5,7 @@ com/pdfprocessor/entity/AnalysisFile.class
 com/pdfprocessor/repository/DocumentRepository.class
 com/pdfprocessor/entity/Document.class
 com/pdfprocessor/controller/FileController.class
+com/pdfprocessor/vaadin/view/component/AnalysisPdfViewer.class
 com/pdfprocessor/vaadin/view/component/ResultsDisplay.class
 com/pdfprocessor/service/AnalysisService.class
 com/pdfprocessor/vaadin/view/component/FileUploadComponent.class
@@ -13,6 +14,8 @@ com/pdfprocessor/service/FileService.class
 com/pdfprocessor/vaadin/view/component/AnalysisPanel.class
 com/pdfprocessor/util/FileUtils.class
 com/pdfprocessor/vaadin/view/component/FileUploadComponent$SimpleMultipartFile.class
+com/pdfprocessor/vaadin/view/component/ZoomableImage.class
 com/pdfprocessor/vaadin/view/component/PdfViewer.class
 com/pdfprocessor/vaadin/view/MainView.class
 com/pdfprocessor/PdfProcessorApplication.class
+com/pdfprocessor/service/PdfMergeService.class

@@ -34,27 +34,12 @@ public class FileController {
     @GetMapping("/{fileName}")
     public ResponseEntity<Resource> getFile(@PathVariable String fileName) {
         try {
-            // Find document by filename
             Document document = fileService.getDocumentByFileName(fileName);
             if (document == null) {
                 return ResponseEntity.notFound().build();
             }
-
-            Path filePath = Paths.get(document.getFilePath());
-            File file = filePath.toFile();
-            
-            if (!file.exists()) {
-                return ResponseEntity.notFound().build();
-            }
-
-            Resource resource = new FileSystemResource(file);
-            
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + fileName + "\"")
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .body(resource);
-                    
-        } catch (Exception e) {
+            return serveFile(document.getFilePath(), fileName, MediaType.APPLICATION_PDF);
+        } catch (RuntimeException e) {
             logger.error("Error serving file: {}", fileName, e);
             return ResponseEntity.internalServerError().build();
         }
@@ -67,12 +52,9 @@ public class FileController {
             @PathVariable int pageNumber) {
         try {
             UUID docId = UUID.fromString(documentId);
-            
-            // Get analysis results
             List<com.pdfprocessor.entity.AnalysisFile> results = 
                 analysisService.getAnalysisResults(docId, analysisType);
             
-            // Find the specific page result
             com.pdfprocessor.entity.AnalysisFile pageResult = results.stream()
                 .filter(result -> result.getPageNumber() == pageNumber)
                 .findFirst()
@@ -82,23 +64,59 @@ public class FileController {
                 return ResponseEntity.notFound().build();
             }
             
-            Path filePath = Paths.get(pageResult.getResultFilePath());
-            File file = filePath.toFile();
+            return serveFile(pageResult.getResultFilePath(), 
+                           Paths.get(pageResult.getResultFilePath()).getFileName().toString(), 
+                           MediaType.IMAGE_PNG);
+        } catch (RuntimeException e) {
+            logger.error("Error serving analysis result image: documentId={}, analysisType={}, pageNumber={}", 
+                        documentId, analysisType, pageNumber, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+    
+    @GetMapping("/analysis/{documentId}/{analysisType}/pdf/{fileName}")
+    public ResponseEntity<Resource> getAnalysisPdf(@PathVariable String documentId, 
+                                                  @PathVariable String analysisType, 
+                                                  @PathVariable String fileName) {
+        try {
+            // Construct the PDF file path
+            String pdfFilePath = "uploads/analysis/" + documentId + "/" + analysisType + "/" + fileName;
+            Path path = Paths.get(pdfFilePath);
+            File file = path.toFile();
+            
+            if (!file.exists()) {
+                logger.warn("Analysis PDF not found: {}", pdfFilePath);
+                return ResponseEntity.notFound().build();
+            }
+            
+            Resource resource = new FileSystemResource(file);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + fileName + "\"")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(resource);
+        } catch (Exception e) {
+            logger.error("Error serving analysis PDF: documentId={}, analysisType={}, fileName={}", 
+                        documentId, analysisType, fileName, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+    
+    private ResponseEntity<Resource> serveFile(String filePath, String fileName, MediaType contentType) {
+        try {
+            Path path = Paths.get(filePath);
+            File file = path.toFile();
             
             if (!file.exists()) {
                 return ResponseEntity.notFound().build();
             }
             
             Resource resource = new FileSystemResource(file);
-            
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getName() + "\"")
-                    .contentType(MediaType.IMAGE_PNG)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + fileName + "\"")
+                    .contentType(contentType)
                     .body(resource);
-                    
-        } catch (Exception e) {
-            logger.error("Error serving analysis result image: documentId={}, analysisType={}, pageNumber={}", 
-                        documentId, analysisType, pageNumber, e);
+        } catch (RuntimeException e) {
+            logger.error("Error serving file: {}", filePath, e);
             return ResponseEntity.internalServerError().build();
         }
     }
