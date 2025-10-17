@@ -74,7 +74,7 @@ public class MainView extends AppLayout {
         Component uploadSection = FileUploadComponent.create(fileService, this::onFileUploaded);
         
         // File list section
-        fileListTitle = new H2("Uploaded Files (" + getDocumentCount() + ")");
+        fileListTitle = new H2("Uploaded Files (" + getAllDocuments().size() + ")");
         fileListTitle.addClassName(LumoUtility.Margin.Top.MEDIUM);
         fileListTitle.addClassName(LumoUtility.Margin.Bottom.SMALL);
         
@@ -122,9 +122,9 @@ public class MainView extends AppLayout {
     }
 
     private void onFileUploaded(Document document) {
-                updateFileList();
-                updatePdfViewer();
-                updateFileCount();
+        updateFileList();
+        updatePdfViewer();
+        updateFileCount();
     }
 
     private void createMainContent() {
@@ -150,8 +150,6 @@ public class MainView extends AppLayout {
         toggleButton.getStyle().set("border-radius", "6px");
         toggleButton.getStyle().set("width", "44px");
         toggleButton.getStyle().set("height", "44px");
-        toggleButton.getStyle().set("box-shadow", "var(--lumo-box-shadow-l)");
-        toggleButton.getStyle().set("transition", "all 0.2s ease");
         toggleButton.getStyle().set("display", "none");
         
         toggleButton.addClickListener(event -> toggleSidebar());
@@ -183,9 +181,9 @@ public class MainView extends AppLayout {
     }
     
     private void onFileDeleted(Document document) {
-                    updateFileList();
-                    updatePdfViewer();
-                    updateFileCount();
+        updateFileList();
+        updatePdfViewer();
+        updateFileCount();
     }
     
     private void onFileSelected(Document document) {
@@ -198,13 +196,10 @@ public class MainView extends AppLayout {
         return fileService.getAllDocuments();
     }
     
-    private int getDocumentCount() {
-        return getAllDocuments().size();
-    }
-    
     private void updateFileCount() {
         if (fileListTitle != null) {
-            fileListTitle.setText("Uploaded Files (" + getDocumentCount() + ")");
+            int count = getAllDocuments().size();
+            fileListTitle.setText("Uploaded Files (" + count + ")");
         }
     }
 }

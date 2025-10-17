@@ -202,13 +202,13 @@ public class AnalysisService {
 
         // Calculate file size
         long fileSize = 0;
-        try {
-            Path path = Paths.get(filePath);
-            if (Files.exists(path)) {
+        Path path = Paths.get(filePath);
+        if (Files.exists(path)) {
+            try {
                 fileSize = Files.size(path);
+            } catch (Exception e) {
+                logger.warn("Could not calculate file size for: {}", filePath, e);
             }
-        } catch (Exception e) {
-            logger.warn("Could not calculate file size for: {}", filePath, e);
         }
 
         // Create and save analysis file
@@ -302,9 +302,6 @@ public class AnalysisService {
             
         } catch (RestClientException e) {
             logger.error("Failed to connect to Python service for polling results: document: {} type: {}", 
-                        documentId, analysisType, e);
-        } catch (Exception e) {
-            logger.error("Unexpected error polling analysis results for document: {} type: {}", 
                         documentId, analysisType, e);
         }
     }

@@ -60,75 +60,64 @@ public class AnalysisPdfViewer {
     }
     
     private static boolean hasAnalysisResults(Document selectedDocument, String analysisType, AnalysisService analysisService) {
-        try {
-            logger.info("Checking analysis results for document: {}, type: {}", selectedDocument.getId(), analysisType);
-            List<AnalysisFile> results = analysisService.getAnalysisResults(selectedDocument.getId(), analysisType);
+        logger.info("Checking analysis results for document: {}, type: {}", selectedDocument.getId(), analysisType);
+        List<AnalysisFile> results = analysisService.getAnalysisResults(selectedDocument.getId(), analysisType);
+        
+        // More strict check - results must exist, not be null, and not be empty
+        boolean hasResults = results != null && !results.isEmpty();
+        logger.info("Analysis results found in DB: {}, count: {}", hasResults, results != null ? results.size() : 0);
+        
+        // Additional check: verify that the physical files actually exist
+        if (hasResults) {
+            boolean physicalFilesExist = checkPhysicalFilesExist(selectedDocument.getId().toString(), analysisType);
+            logger.info("Physical files exist: {}", physicalFilesExist);
             
-            // More strict check - results must exist, not be null, and not be empty
-            boolean hasResults = results != null && !results.isEmpty() && results.size() > 0;
-            logger.info("Analysis results found in DB: {}, count: {}", hasResults, results != null ? results.size() : 0);
-            
-            // Additional check: verify that the physical files actually exist
-            if (hasResults) {
-                boolean physicalFilesExist = checkPhysicalFilesExist(selectedDocument.getId().toString(), analysisType);
-                logger.info("Physical files exist: {}", physicalFilesExist);
-                
-                if (!physicalFilesExist) {
-                    logger.warn("Analysis results exist in DB but physical files are missing for document: {}", selectedDocument.getId());
-                    return false; // Return false if files don't exist
-                }
-                
-                for (AnalysisFile result : results) {
-                    logger.info("Analysis result: page={}", result.getPageNumber());
-                }
+            if (!physicalFilesExist) {
+                logger.warn("Analysis results exist in DB but physical files are missing for document: {}", selectedDocument.getId());
+                return false; // Return false if files don't exist
             }
             
-            return hasResults;
-        } catch (Exception e) {
-            logger.warn("Error checking analysis results for document {}: {}", selectedDocument.getId(), e.getMessage());
-            return false;
+            for (AnalysisFile result : results) {
+                logger.info("Analysis result: page={}", result.getPageNumber());
+            }
         }
+        
+        return hasResults;
     }
     
     private static boolean checkPhysicalFilesExist(String documentId, String analysisType) {
-        try {
-            String analysisDir = "uploads/analysis/" + documentId + "/" + analysisType;
-            java.io.File dir = new java.io.File(analysisDir);
-            
-            if (!dir.exists() || !dir.isDirectory()) {
-                logger.info("Analysis directory does not exist: {}", analysisDir);
-                return false;
-            }
-            
-            // Check if there are any image files in the directory
-            String[] imageExtensions = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif"};
-            java.io.File[] files = dir.listFiles();
-            
-            if (files == null || files.length == 0) {
-                logger.info("No files found in analysis directory: {}", analysisDir);
-                return false;
-            }
-            
-            // Check if any of the files are images
-            for (java.io.File file : files) {
-                if (file.isFile()) {
-                    String fileName = file.getName().toLowerCase();
-                    for (String ext : imageExtensions) {
-                        if (fileName.endsWith(ext)) {
-                            logger.info("Found image file: {}", file.getName());
-                            return true; // At least one image file exists
-                        }
+        String analysisDir = "uploads/analysis/" + documentId + "/" + analysisType;
+        java.io.File dir = new java.io.File(analysisDir);
+        
+        if (!dir.exists() || !dir.isDirectory()) {
+            logger.info("Analysis directory does not exist: {}", analysisDir);
+            return false;
+        }
+        
+        // Check if there are any image files in the directory
+        String[] imageExtensions = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif"};
+        java.io.File[] files = dir.listFiles();
+        
+        if (files == null || files.length == 0) {
+            logger.info("No files found in analysis directory: {}", analysisDir);
+            return false;
+        }
+        
+        // Check if any of the files are images
+        for (java.io.File file : files) {
+            if (file.isFile()) {
+                String fileName = file.getName().toLowerCase();
+                for (String ext : imageExtensions) {
+                    if (fileName.endsWith(ext)) {
+                        logger.info("Found image file: {}", file.getName());
+                        return true; // At least one image file exists
                     }
                 }
             }
-            
-            logger.info("No image files found in analysis directory: {}", analysisDir);
-            return false;
-            
-        } catch (Exception e) {
-            logger.error("Error checking physical files for document {}: {}", documentId, e.getMessage());
-            return false;
         }
+        
+        logger.info("No image files found in analysis directory: {}", analysisDir);
+        return false;
     }
     
     private static Component createEmptyState() {
@@ -308,82 +297,39 @@ public class AnalysisPdfViewer {
         
         // Click handler to refresh only this PDF viewer area
         refreshButton.addClickListener(event -> {
-            try {
-                // Show loading state
-                refreshButton.setEnabled(false);
-                refreshButton.getElement().setProperty("innerHTML", 
-                    "<div style='animation: spin 1s linear infinite; transform-origin: center;'>⟳</div>");
-                refreshButton.getStyle().set("background", "var(--lumo-contrast-10pct)");
-                
-                // Add CSS animation if not already present
-                refreshButton.getUI().ifPresent(ui -> {
-                    ui.getPage().executeJs(
-                        "if (!document.getElementById('refresh-spinner-style')) {" +
-                        "  var style = document.createElement('style');" +
-                        "  style.id = 'refresh-spinner-style';" +
-                        "  style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';" +
-                        "  document.head.appendChild(style);" +
-                        "}"
-                    );
+            // Show loading state
+            refreshButton.setEnabled(false);
+            refreshButton.getStyle().set("background", "var(--lumo-contrast-10pct)");
+            
+            // Poll for new results
+            analysisService.pollAndSaveAnalysisResults(selectedDocument.getId(), analysisType);
+            
+            // Refresh only this PDF viewer area using UI.access for thread safety
+            refreshButton.getUI().ifPresent(ui -> {
+                ui.access(() -> {
+                    // Find the main container (this AnalysisPdfViewer's container)
+                    Component mainContainer = findThisPdfViewerContainer(refreshButton);
+                    if (mainContainer instanceof VerticalLayout) {
+                        refreshThisPdfViewerArea((VerticalLayout) mainContainer, selectedDocument, analysisType, analysisService);
+                    }
+                    
+                    // Reset button state
+                    refreshButton.setEnabled(true);
+                    refreshButton.getStyle().set("background", "var(--lumo-base-color)");
+                    
+                    // Check if results exist and update button color accordingly
+                    var analysisResults = analysisService.getAnalysisResults(selectedDocument.getId(), analysisType);
+                    if (analysisResults != null && !analysisResults.isEmpty()) {
+                        refreshButton.getStyle().set("background", "var(--lumo-success-color)");
+                        refreshButton.getStyle().set("color", "var(--lumo-success-contrast-color)");
+                        logger.info("PDF viewer area refreshed successfully for {} analysis, document: {}", analysisType, selectedDocument.getId());
+                    } else {
+                        refreshButton.getStyle().set("background", "var(--lumo-base-color)");
+                        refreshButton.getStyle().set("color", "var(--lumo-contrast-90pct)");
+                        logger.info("No analysis results found yet for {} analysis, document: {}", analysisType, selectedDocument.getId());
+                    }
                 });
-                
-                // Poll for new results
-                analysisService.pollAndSaveAnalysisResults(selectedDocument.getId(), analysisType);
-                
-                // Refresh only this PDF viewer area using UI.access for thread safety
-                refreshButton.getUI().ifPresent(ui -> {
-                    ui.access(() -> {
-                        try {
-                            // Find the main container (this AnalysisPdfViewer's container)
-                            Component mainContainer = findThisPdfViewerContainer(refreshButton);
-                            if (mainContainer instanceof VerticalLayout) {
-                                refreshThisPdfViewerArea((VerticalLayout) mainContainer, selectedDocument, analysisType, analysisService);
-                            }
-                            
-                            // Reset button state
-                            refreshButton.setEnabled(true);
-                            refreshButton.getElement().setProperty("innerHTML", "");
-                            // Create a completely new button with icon to avoid icon conflicts
-                            refreshButton.getElement().setProperty("innerHTML", 
-                                "<vaadin-icon icon=\"vaadin:refresh\" style=\"width: 16px; height: 16px;\"></vaadin-icon>");
-                            
-                            // Check if results exist and update button color accordingly
-                            var analysisResults = analysisService.getAnalysisResults(selectedDocument.getId(), analysisType);
-                            if (analysisResults != null && !analysisResults.isEmpty()) {
-                                refreshButton.getStyle().set("background", "var(--lumo-success-color)");
-                                refreshButton.getStyle().set("color", "var(--lumo-success-contrast-color)");
-                                logger.info("PDF viewer area refreshed successfully for {} analysis, document: {}", analysisType, selectedDocument.getId());
-                            } else {
-                                refreshButton.getStyle().set("background", "var(--lumo-base-color)");
-                                refreshButton.getStyle().set("color", "var(--lumo-contrast-90pct)");
-                                logger.info("No analysis results found yet for {} analysis, document: {}", analysisType, selectedDocument.getId());
-                            }
-                            
-                        } catch (Exception e) {
-                            logger.error("Error refreshing PDF viewer area: {}", e.getMessage(), e);
-                            // Reset button on error
-                            refreshButton.setEnabled(true);
-                            refreshButton.getElement().setProperty("innerHTML", "");
-                            // Create a completely new button with icon to avoid icon conflicts
-                            refreshButton.getElement().setProperty("innerHTML", 
-                                "<vaadin-icon icon=\"vaadin:refresh\" style=\"width: 16px; height: 16px;\"></vaadin-icon>");
-                            refreshButton.getStyle().set("background", "var(--lumo-error-color)");
-                            refreshButton.getStyle().set("color", "var(--lumo-error-contrast-color)");
-                        }
-                    });
-                });
-                
-            } catch (Exception e) {
-                logger.error("Error checking analysis results: {}", e.getMessage(), e);
-                // Reset button on error
-                refreshButton.setEnabled(true);
-                refreshButton.getElement().setProperty("innerHTML", "");
-                // Create a completely new button with icon to avoid icon conflicts
-                refreshButton.getElement().setProperty("innerHTML", 
-                    "<vaadin-icon icon=\"vaadin:refresh\" style=\"width: 16px; height: 16px;\"></vaadin-icon>");
-                refreshButton.getStyle().set("background", "var(--lumo-error-color)");
-                refreshButton.getStyle().set("color", "var(--lumo-error-contrast-color)");
-            }
+            });
         });
         
         return refreshButton;
@@ -555,29 +501,24 @@ public class AnalysisPdfViewer {
      */
     private static void refreshThisPdfViewerArea(VerticalLayout mainContainer, Document selectedDocument, 
                                                String analysisType, AnalysisService analysisService) {
-        try {
-            // Remove ALL existing content areas (both start analysis and PDF viewer areas)
-            // Find and remove any existing content divs
-            List<Component> componentsToRemove = mainContainer.getChildren()
-                .filter(child -> child instanceof Div)
-                .collect(Collectors.toList());
-            
-            // Remove all found divs
-            componentsToRemove.forEach(component -> {
-                mainContainer.remove(component);
-                logger.info("Removed existing content area for {} analysis", analysisType);
-            });
-            
-            // Always create and add the new PDF viewer area
-            // This will show either the PDF (if results exist) or "Analysis in Progress" (if no results yet)
-            Div newPdfViewerArea = createPdfViewerArea(selectedDocument, analysisType, analysisService);
-            mainContainer.add(newPdfViewerArea);
-            
-            logger.info("Refreshed PDF viewer area for {} analysis, document: {} - Results exist: {}", 
-                       analysisType, selectedDocument.getId(), hasAnalysisResults(selectedDocument, analysisType, analysisService));
-                
-        } catch (Exception e) {
-            logger.error("Error refreshing this PDF viewer area: {}", e.getMessage(), e);
-        }
+        // Remove ALL existing content areas (both start analysis and PDF viewer areas)
+        // Find and remove any existing content divs
+        List<Component> componentsToRemove = mainContainer.getChildren()
+            .filter(child -> child instanceof Div)
+            .collect(Collectors.toList());
+        
+        // Remove all found divs
+        componentsToRemove.forEach(component -> {
+            mainContainer.remove(component);
+            logger.info("Removed existing content area for {} analysis", analysisType);
+        });
+        
+        // Always create and add the new PDF viewer area
+        // This will show either the PDF (if results exist) or "Analysis in Progress" (if no results yet)
+        Div newPdfViewerArea = createPdfViewerArea(selectedDocument, analysisType, analysisService);
+        mainContainer.add(newPdfViewerArea);
+        
+        logger.info("Refreshed PDF viewer area for {} analysis, document: {} - Results exist: {}", 
+                   analysisType, selectedDocument.getId(), hasAnalysisResults(selectedDocument, analysisType, analysisService));
     }
 }

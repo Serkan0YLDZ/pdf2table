@@ -53,42 +53,42 @@ public class PdfMergeService {
      * Create analysis PDF using Python script
      */
     private String createAnalysisPdfWithPython(String documentId, String analysisType) {
+        // Path to Python script
+        String pythonScriptPath = "../python-analysis-service/docling_to_pdf.py";
+        Path scriptPath = Paths.get(pythonScriptPath).toAbsolutePath();
+        
+        if (!Files.exists(scriptPath)) {
+            logger.error("Python script not found at: {}", scriptPath);
+            return null;
+        }
+        
+        // Path to Python executable in virtual environment
+        String pythonExecutable = "../python-analysis-service/myenv/bin/python";
+        Path pythonPath = Paths.get(pythonExecutable).toAbsolutePath();
+        
+        if (!Files.exists(pythonPath)) {
+            logger.error("Python executable not found at: {}", pythonPath);
+            return null;
+        }
+        
+        // Build command
+        ProcessBuilder processBuilder = new ProcessBuilder(
+            pythonPath.toString(), 
+            scriptPath.toString(),
+            documentId,
+            "--analysis-type", analysisType,
+            "--base-dir", "uploads/analysis"
+        );
+        
+        // Set working directory
+        processBuilder.directory(new File("."));
+        
+        // Redirect error stream to output stream
+        processBuilder.redirectErrorStream(true);
+        
+        logger.info("Executing Python script: {}", String.join(" ", processBuilder.command()));
+        
         try {
-            // Path to Python script
-            String pythonScriptPath = "../python-analysis-service/docling_to_pdf.py";
-            Path scriptPath = Paths.get(pythonScriptPath).toAbsolutePath();
-            
-            if (!Files.exists(scriptPath)) {
-                logger.error("Python script not found at: {}", scriptPath);
-                return null;
-            }
-            
-            // Path to Python executable in virtual environment
-            String pythonExecutable = "../python-analysis-service/myenv/bin/python";
-            Path pythonPath = Paths.get(pythonExecutable).toAbsolutePath();
-            
-            if (!Files.exists(pythonPath)) {
-                logger.error("Python executable not found at: {}", pythonPath);
-                return null;
-            }
-            
-            // Build command
-            ProcessBuilder processBuilder = new ProcessBuilder(
-                pythonPath.toString(), 
-                scriptPath.toString(),
-                documentId,
-                "--analysis-type", analysisType,
-                "--base-dir", "uploads/analysis"
-            );
-            
-            // Set working directory
-            processBuilder.directory(new File("."));
-            
-            // Redirect error stream to output stream
-            processBuilder.redirectErrorStream(true);
-            
-            logger.info("Executing Python script: {}", String.join(" ", processBuilder.command()));
-            
             // Start process
             Process process = processBuilder.start();
             
@@ -139,9 +139,13 @@ public class PdfMergeService {
      * Check if analysis results are available for merging
      */
     public boolean hasAnalysisResults(Document document, String analysisType) {
+        Path analysisDir = Paths.get("uploads/analysis/" + document.getId() + "/" + analysisType);
+        if (!Files.exists(analysisDir)) {
+            return false;
+        }
+        
         try {
-            Path analysisDir = Paths.get("uploads/analysis/" + document.getId() + "/" + analysisType);
-            return Files.exists(analysisDir) && Files.list(analysisDir).findAny().isPresent();
+            return Files.list(analysisDir).findAny().isPresent();
         } catch (IOException e) {
             logger.warn("Error checking analysis results: {}", e.getMessage());
             return false;

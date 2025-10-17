@@ -38,17 +38,17 @@ public class AnalysisController {
      */
     @PostMapping("/start")
     public ResponseEntity<Map<String, Object>> startAnalysis(@RequestBody Map<String, Object> request) {
+        String documentIdStr = (String) request.get("documentId");
+        String analysisType = (String) request.get("analysisType");
+
+        if (documentIdStr == null || analysisType == null) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "documentId and analysisType are required");
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+
         try {
-            String documentIdStr = (String) request.get("documentId");
-            String analysisType = (String) request.get("analysisType");
-
-            if (documentIdStr == null || analysisType == null) {
-                Map<String, Object> errorResponse = new HashMap<>();
-                errorResponse.put("success", false);
-                errorResponse.put("message", "documentId and analysisType are required");
-                return ResponseEntity.badRequest().body(errorResponse);
-            }
-
             UUID documentId = UUID.fromString(documentIdStr);
             analysisService.startAnalysis(documentId, analysisType);
 
@@ -83,16 +83,10 @@ public class AnalysisController {
     public ResponseEntity<List<AnalysisFile>> getAnalysisResults(
             @PathVariable UUID documentId,
             @PathVariable String analysisType) {
-        try {
-            logger.info("Getting analysis results for document: {} type: {}", documentId, analysisType);
-            
-            List<AnalysisFile> results = analysisService.getAnalysisResults(documentId, analysisType);
-            return ResponseEntity.ok(results);
-
-        } catch (RuntimeException e) {
-            logger.error("Error getting analysis results", e);
-            return ResponseEntity.internalServerError().build();
-        }
+        logger.info("Getting analysis results for document: {} type: {}", documentId, analysisType);
+        
+        List<AnalysisFile> results = analysisService.getAnalysisResults(documentId, analysisType);
+        return ResponseEntity.ok(results);
     }
 
     /**
@@ -102,18 +96,10 @@ public class AnalysisController {
     public ResponseEntity<Map<String, Object>> getAnalysisStatus(
             @PathVariable UUID documentId,
             @PathVariable String analysisType) {
-        try {
-            logger.info("Getting analysis status for document: {} type: {}", documentId, analysisType);
-            
-            Map<String, Object> status = analysisService.getAnalysisStatus(documentId, analysisType);
-            return ResponseEntity.ok(status);
-
-        } catch (RuntimeException e) {
-            logger.error("Error getting analysis status", e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Failed to get analysis status: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(errorResponse);
-        }
+        logger.info("Getting analysis status for document: {} type: {}", documentId, analysisType);
+        
+        Map<String, Object> status = analysisService.getAnalysisStatus(documentId, analysisType);
+        return ResponseEntity.ok(status);
     }
 
 
@@ -125,41 +111,35 @@ public class AnalysisController {
             @PathVariable UUID documentId,
             @PathVariable String analysisType,
             @PathVariable Integer pageNumber) {
-        try {
-            logger.info("Getting analysis file for document: {} type: {} page: {}", 
-                       documentId, analysisType, pageNumber);
-            
-            List<AnalysisFile> results = analysisService.getAnalysisResults(documentId, analysisType);
-            
-            AnalysisFile targetFile = results.stream()
-                .filter(file -> file.getPageNumber().equals(pageNumber))
-                .findFirst()
-                .orElse(null);
+        logger.info("Getting analysis file for document: {} type: {} page: {}", 
+                   documentId, analysisType, pageNumber);
+        
+        List<AnalysisFile> results = analysisService.getAnalysisResults(documentId, analysisType);
+        
+        AnalysisFile targetFile = results.stream()
+            .filter(file -> file.getPageNumber().equals(pageNumber))
+            .findFirst()
+            .orElse(null);
 
-            if (targetFile == null) {
-                return ResponseEntity.notFound().build();
-            }
-
-            Path filePath = Paths.get(targetFile.getResultFilePath());
-            File file = filePath.toFile();
-            
-            if (!file.exists()) {
-                logger.warn("Analysis result file not found: {}", targetFile.getResultFilePath());
-                return ResponseEntity.notFound().build();
-            }
-
-            Resource resource = new FileSystemResource(file);
-            
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, 
-                           "inline; filename=\"" + file.getName() + "\"")
-                    .contentType(MediaType.IMAGE_PNG)
-                    .body(resource);
-                    
-        } catch (RuntimeException e) {
-            logger.error("Error getting analysis file", e);
-            return ResponseEntity.internalServerError().build();
+        if (targetFile == null) {
+            return ResponseEntity.notFound().build();
         }
+
+        Path filePath = Paths.get(targetFile.getResultFilePath());
+        File file = filePath.toFile();
+        
+        if (!file.exists()) {
+            logger.warn("Analysis result file not found: {}", targetFile.getResultFilePath());
+            return ResponseEntity.notFound().build();
+        }
+
+        Resource resource = new FileSystemResource(file);
+        
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, 
+                       "inline; filename=\"" + file.getName() + "\"")
+                .contentType(MediaType.IMAGE_PNG)
+                .body(resource);
     }
 
     /**
@@ -169,9 +149,9 @@ public class AnalysisController {
     public ResponseEntity<Map<String, Object>> pollAnalysisResults(
             @PathVariable UUID documentId,
             @PathVariable String analysisType) {
+        logger.info("Polling analysis results for document: {} type: {}", documentId, analysisType);
+        
         try {
-            logger.info("Polling analysis results for document: {} type: {}", documentId, analysisType);
-            
             analysisService.pollAndSaveAnalysisResults(documentId, analysisType);
             
             Map<String, Object> response = new HashMap<>();
