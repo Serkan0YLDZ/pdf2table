@@ -140,7 +140,7 @@ public class AnalysisPdfViewer {
     private static Component createAnalysisStartArea(Document selectedDocument, String analysisType, AnalysisService analysisService) {
         Div startArea = new Div();
         startArea.setWidth("calc(100% - 4rem)");
-        startArea.setHeight("calc(100% - 100px)");
+        startArea.setHeight("calc(100% - 100px + 189px)");
         startArea.getStyle().set("border", "1px solid var(--lumo-contrast-10pct)");
         startArea.getStyle().set("border-radius", "var(--lumo-border-radius-m)");
         startArea.getStyle().set("background", "var(--lumo-contrast-5pct)");
@@ -364,7 +364,7 @@ public class AnalysisPdfViewer {
     private static Div createPdfViewerArea(Document selectedDocument, String analysisType, AnalysisService analysisService) {
         Div pdfViewerArea = new Div();
         pdfViewerArea.setWidthFull();
-        pdfViewerArea.setHeight("calc(100% - 100px)");
+        pdfViewerArea.setHeight("calc(100% - 100px + 189px)");
         pdfViewerArea.getStyle().set("border", "1px solid var(--lumo-contrast-10pct)");
         pdfViewerArea.getStyle().set("border-radius", "var(--lumo-border-radius-m)");
         pdfViewerArea.getStyle().set("background", "var(--lumo-contrast-5pct)");

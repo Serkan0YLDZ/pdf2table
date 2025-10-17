@@ -96,32 +96,28 @@ public class FileService {
     @Transactional
     public boolean deleteDocument(UUID id) {
         logger.info("Deleting document with ID: {}", id);
-        try {
-            Optional<Document> documentOpt = documentRepository.findById(id);
-            if (documentOpt.isPresent()) {
-                Document document = documentOpt.get();
-                
-                // Delete physical file
-                try {
-                    Path filePath = Paths.get(document.getFilePath());
-                    if (Files.exists(filePath)) {
-                        Files.delete(filePath);
-                        logger.info("Physical file deleted: {}", filePath);
-                    }
-                } catch (IOException e) {
-                    logger.warn("Could not delete physical file: {}", e.getMessage());
+        
+        Optional<Document> documentOpt = documentRepository.findById(id);
+        if (documentOpt.isPresent()) {
+            Document document = documentOpt.get();
+            
+            // Delete physical file - sadece I/O işlemi için try-catch
+            try {
+                Path filePath = Paths.get(document.getFilePath());
+                if (Files.exists(filePath)) {
+                    Files.delete(filePath);
+                    logger.info("Physical file deleted: {}", filePath);
                 }
-
-                // Delete from database
-                documentRepository.deleteById(id);
-                logger.info("Document deleted from database: {}", id);
-                return true;
+            } catch (IOException e) {
+                logger.warn("Could not delete physical file: {}", e.getMessage());
             }
-            return false;
-        } catch (Exception e) {
-            logger.error("Error deleting document: {}", e.getMessage());
-            return false;
+
+            // Delete from database - I/O işlemi değil, try-catch gereksiz
+            documentRepository.deleteById(id);
+            logger.info("Document deleted from database: {}", id);
+            return true;
         }
+        return false;
     }
 
     public String getFileSizeInHumanReadable(Long fileSize) {

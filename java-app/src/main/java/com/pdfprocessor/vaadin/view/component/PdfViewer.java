@@ -62,12 +62,9 @@ public class PdfViewer {
     
     private static Component createPdfHeader(Document selectedDocument, FileService fileService) {
         Div header = new Div();
-        header.getStyle().set("margin-bottom", "1.5rem");
-        header.getStyle().set("padding-bottom", "1rem");
-        header.getStyle().set("border-bottom", "2px solid var(--lumo-primary-color-10pct)");
         
         H3 title = new H3(selectedDocument.getFileName());
-        title.getStyle().set("margin", "0 0 0.5rem 0");
+        title.getStyle().set("margin", "0 0 0.125rem 0");
         title.getStyle().set("color", "var(--lumo-contrast-90pct)");
         title.getStyle().set("font-size", "var(--lumo-font-size-l)");
         title.getStyle().set("font-weight", "600");
@@ -77,7 +74,7 @@ public class PdfViewer {
         fileInfo.getStyle().set("color", "var(--lumo-contrast-50pct)");
         fileInfo.getStyle().set("font-size", "var(--lumo-font-size-s)");
         fileInfo.getStyle().set("background", "var(--lumo-contrast-5pct)");
-        fileInfo.getStyle().set("padding", "0.25rem 0.5rem");
+        fileInfo.getStyle().set("padding", "0.0625rem 0.5rem");
         fileInfo.getStyle().set("border-radius", "var(--lumo-border-radius-s)");
         
         header.add(title, fileInfo);
@@ -87,7 +84,7 @@ public class PdfViewer {
     private static Component createPdfContainer(Document selectedDocument) {
         Div pdfContainer = new Div();
         pdfContainer.setWidthFull();
-        pdfContainer.setHeight("calc(100% - 120px)");
+        pdfContainer.setHeight("calc(100% - 60px)");
         pdfContainer.getStyle().set("border", "1px solid var(--lumo-contrast-10pct)");
         pdfContainer.getStyle().set("border-radius", "var(--lumo-border-radius-m)");
         pdfContainer.getStyle().set("background", "var(--lumo-contrast-5pct)");

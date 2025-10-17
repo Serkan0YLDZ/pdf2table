@@ -92,8 +92,8 @@ public class AnalysisService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
 
+        // Sadece HTTP isteği için try-catch
         try {
-            // Call Python service - sadece bu satırı try-catch'e al
             String url = pythonServiceUrl + "/analyze";
             ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, request, Map.class);
 
